@@ -1,9 +1,3 @@
-####
-# - add conda environment
-# - change the params
-# - change rule all..
-####
-
 GENOTYPE_FILES = ["PL.txt", "GU.txt"]
 
 # Default configuration
