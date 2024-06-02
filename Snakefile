@@ -1,12 +1,23 @@
 GENOTYPE_FILES = ["PL.txt", "GU.txt"]
 
-# Default configuration
 configfile: "config.yaml"
 
 rule all:
     input:
+        "data/PL.csv",
+        "data/GU.csv",
         "results/PL/coverage_plot.png",
         "results/GU/coverage_plot.png"
+
+rule convert_to_csv:
+    input:
+        "data/{sample}.txt"
+    output:
+        "data/{sample}.csv"
+    conda:
+        "envs/gmf.yaml"
+    shell:
+        "python tocsv.py {input} {output}"
 
 rule read_matrix:
     input:
