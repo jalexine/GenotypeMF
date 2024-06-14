@@ -1,0 +1,11 @@
+name: gmf
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.8
+  - numpy
+  - scipy
+  - matplotlib
+  - snakemake
+
