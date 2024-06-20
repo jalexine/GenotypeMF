@@ -1,24 +1,18 @@
 GENOTYPE_FILES = ["PL", "GU"]
-k_values = [5, 10, 20, 30, 40, 50]
+k_values = [5,10, 20, 30, 40, 50]
 
-configfile: "config.yaml"
 
 rule all:
     input:
-        expand("results/{sample}/FastUndercover/Ak{k}FastU.csv", sample=GENOTYPE_FILES, k=k_values),
-        expand("results/{sample}/FastUndercover/Bk{k}FastU.csv", sample=GENOTYPE_FILES, k=k_values),
-        expand("results/{sample}/Optiblock/Ak{k}OptiB.csv", sample=GENOTYPE_FILES, k=k_values),
-        expand("results/{sample}/Optiblock/Bk{k}OptiB.csv", sample=GENOTYPE_FILES, k=k_values)
-
-rule convert_to_csv:
-    input:
-        "data/{sample}.txt"
-    output:
-        "data/{sample}.csv"
-    conda:
-        "envs/gmf.yaml"
-    shell:
-        "python tocsv.py {input} {output}"
+        expand("results/{sample}/ABMatrix/{sample}_GreConDA_k{k}.npz", sample=GENOTYPE_FILES, k=k_values),
+        expand("results/{sample}/ABMatrix/{sample}_GreConDB_k{k}.npz", sample=GENOTYPE_FILES, k=k_values),
+        expand("results/{sample}/reconstructed_matrix/{sample}_GreConD_reconstructed_k{k}.npz", sample=GENOTYPE_FILES, k=k_values),
+        expand("results/{sample}/ABMatrix/{sample}_TopFiberA_k{k}.npz", sample=GENOTYPE_FILES, k=k_values),
+        expand("results/{sample}/ABMatrix/{sample}_TopFiberB_k{k}.npz", sample=GENOTYPE_FILES, k=k_values),
+        expand("results/{sample}/reconstructed_matrix/{sample}_TopFiber_reconstructed_k{k}.npz", sample=GENOTYPE_FILES, k=k_values),
+        expand("results/{sample}/ABMatrix/{sample}_ASSOA_k{k}.npz", sample=GENOTYPE_FILES, k=k_values),
+        expand("results/{sample}/ABMatrix/{sample}_ASSOB_k{k}.npz", sample=GENOTYPE_FILES, k=k_values),
+        expand("results/{sample}/reconstructed_matrix/{sample}_ASSO_reconstructed_k{k}.npz", sample=GENOTYPE_FILES, k=k_values)
 
 rule read_matrix:
     input:
@@ -34,70 +28,49 @@ rule grecond:
     input:
         "data/{sample}.npz"
     output:
-        "results/{sample}/A_matrix.txt",
-        "results/{sample}/B_matrix.txt",
-        "results/{sample}/coverage_results.txt",
-        "results/{sample}/error_results.txt",
-        "results/{sample}/results_summary.csv"
-
+        "results/{sample}/ABMatrix/{sample}_GreConDA_k{k}.npz",
+        "results/{sample}/ABMatrix/{sample}_GreConDB_k{k}.npz",
+        "results/{sample}/reconstructed_matrix/{sample}_GreConD_reconstructed_k{k}.npz"
+    log:
+        "results/{sample}/{sample}TopFiber_k{k}.log"
     params:
-        max_factors=config["maxf"]
-    conda:
-        "envs/gmf.yaml"
+        k="{k}"
     shell:
-        "python GreConD.py {input} {params.max_factors}"
+        "python scripts/GreConD.py {input} {output[0]} {output[1]} {output[2]} {params.k}"
 
-rule plot_coverage:
+rule asso:
     input:
-        "results/{sample}/coverage_results.txt"
+        "data/{sample}.npz"
     output:
-        "results/{sample}/coverage_plot.png"
-    conda:
-        "envs/gmf.yaml"
-    shell:
-        "python coverage.py {input} {output}"
-
-rule calculate_error:
-    input:
-        original="data/{sample}.npz",
-        A_matrix="results/{sample}/A_matrix.txt",
-        B_matrix="results/{sample}/B_matrix.txt"
-    output:
-        "results/{sample}/error.txt"
-    conda:
-        "envs/gmf.yaml"
-    shell:
-        "python error.py {input.original} {input.A_matrix} {input.B_matrix} {output}"
-
-rule FastUndercover:
-    input:
-        csv_file="data/{sample}.csv"
-    output:
-        A=expand("results/{{sample}}/FastUndercover/Ak{k}FastU.csv", k=k_values),
-        B=expand("results/{{sample}}/FastUndercover/Bk{k}FastU.csv", k=k_values)
+        "results/{sample}/ABMatrix/{sample}_ASSOA_k{k}.npz",
+        "results/{sample}/ABMatrix/{sample}_ASSOB_k{k}.npz",
+        "results/{sample}/reconstructed_matrix/{sample}_ASSO_reconstructed_k{k}.npz"
+    log:
+        "results/{sample}/{sample}ASSO_k{k}.log"
     params:
-        k_values=k_values
-    conda:
-        "envs/gmf.yaml"
+        k="{k}",
+        sample="{sample}",
+        verbose=0,
+        threshold=0.6,
+        penalty=4,
+        bonus=2
     shell:
-        """
-        for k in {params.k_values}; do
-            ./UndercoverBMF/inferbmf -k $k fromFile -o results/{wildcards.sample}/FastUndercover/Ak${{k}}FastU.csv -O results/{wildcards.sample}/FastUndercover/Bk${{k}}FastU.csv {input.csv_file}
-        done
-        """
-rule Optiblock:
+        "python scripts/ASSO.py {input} {output[0]} {output[1]} {output[2]} {params.k} {params.verbose} {params.threshold} {params.penalty} {params.bonus}"
+
+rule topfiber:
     input:
-        csv_file="data/{sample}.csv"
+        "data/{sample}.npz"
     output:
-        A=expand("results/{{sample}}/Optiblock/Ak{k}OptiB.csv", k=k_values),
-        B=expand("results/{{sample}}/Optiblock/Bk{k}OptiB.csv", k=k_values)
+        "results/{sample}/ABMatrix/{sample}_TopFiberA_k{k}.npz",
+        "results/{sample}/ABMatrix/{sample}_TopFiberB_k{k}.npz",
+        "results/{sample}/reconstructed_matrix/{sample}_TopFiber_reconstructed_k{k}.npz"
+    log:
+        "results/{sample}/{sample}TopFiber_k{k}.log"
     params:
-        k_values=k_values
-    conda:
-        "envs/gmf.yaml"
+        k="{k}",  
+        sample="{sample}",
+        tPval=0.8,
+        verbose=2,
+        search_limits=200
     shell:
-        """
-        for k in {params.k_values}; do
-            ./UndercoverBMF/inferbmf -k $k --OptiBlock fromFile -o results/{wildcards.sample}/OptiBlock/Ak${{k}}OptiB.csv -O results/{wildcards.sample}/Optiblock/Bk${{k}}OptiB.csv {input.csv_file}
-        done
-        """
+        "python scripts/TopFiberM.py {input} {output[0]} {output[1]} {output[2]} {params.k} {params.tPval} {params.verbose} {params.search_limits}"
