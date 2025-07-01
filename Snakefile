@@ -22,7 +22,7 @@ rule read_matrix:
     conda:
         "envs/gmf.yaml"
     shell:
-        "python readmatrix.py {input} {output}"
+        "python scripts/readmatrix.py {input} {output}"
 
 rule grecond:
     input:
