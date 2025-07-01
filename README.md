@@ -12,8 +12,4 @@ The Boolean Matrix Factorization (BMF) problem aims to approximate an m × n Boo
 - **TopFiberM** : Selects and extends fibers (rows/columns) to optimally represent the matrix, using sum vectors to find fibers with maximum 1s.
 - **FastUndercover** : Turns the problem into a MaxSAT instance with hard constraints to avoid false positives and soft constraints to maximize true positives.
 
-## Getting Started
-
-### Prerequisites
-- Conda
-(soon)
+## you can find my internship report in this folder
